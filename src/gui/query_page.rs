@@ -1,10 +1,10 @@
 use crate::helpers::{connection::Connection, query_executor::QueryExecutor};
 use anyhow::Result;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Paragraph, Row, Table, TableState, Wrap},
-    Frame,
 };
 
 pub enum QueryPageAction {
@@ -56,7 +56,7 @@ impl QueryPage {
         self.results.clear();
         self.headers.clear();
         self.error = None;
-        self.focus = Focus::Query; // Make sure we start in Query focus
+        self.focus = Focus::Query;
         self.table_state = TableState::default();
         self.horizontal_scroll = 0;
         Ok(())
@@ -80,14 +80,17 @@ impl QueryPage {
             ])
             .split(area);
 
-        // Title with connection info
         let conn_name = self
             .connection
             .as_ref()
             .map(|c| c.name.as_str())
             .unwrap_or("No Connection");
         let title = Paragraph::new(format!("Query Editor - {}", conn_name))
-            .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(title, chunks[0]);
@@ -104,10 +107,11 @@ impl QueryPage {
         } else if !self.results.is_empty() {
             self.render_table(f, chunks[2]);
         } else {
-            let placeholder = Paragraph::new("No results yet. Execute a query to see results here.")
-                .style(Style::default().fg(Color::DarkGray))
-                .block(Block::default().borders(Borders::ALL).title("Results"))
-                .alignment(Alignment::Center);
+            let placeholder =
+                Paragraph::new("No results yet. Execute a query to see results here.")
+                    .style(Style::default().fg(Color::DarkGray))
+                    .block(Block::default().borders(Borders::ALL).title("Results"))
+                    .alignment(Alignment::Center);
             f.render_widget(placeholder, chunks[2]);
         }
 
@@ -128,7 +132,7 @@ impl QueryPage {
 
     fn render_query_input(&mut self, f: &mut Frame, area: Rect) {
         let is_focused = matches!(self.focus, Focus::Query);
-        
+
         let query_block = Block::default()
             .borders(Borders::ALL)
             .title(if is_focused {
@@ -137,7 +141,9 @@ impl QueryPage {
                 "SQL Query (Ctrl+E to Execute)"
             })
             .border_style(if is_focused {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             });
@@ -161,11 +167,13 @@ impl QueryPage {
 
     fn render_table(&mut self, f: &mut Frame, area: Rect) {
         let selected_row = self.table_state.selected().unwrap_or(0);
-        
+
         // Visible columns based on horizontal scroll
-        let visible_headers: Vec<&String> = self.headers.iter().skip(self.horizontal_scroll).collect();
+        let visible_headers: Vec<&String> =
+            self.headers.iter().skip(self.horizontal_scroll).collect();
         let num_visible = visible_headers.len().min(10); // Show max 10 columns at once
-        let visible_headers: Vec<&String> = visible_headers.iter().take(num_visible).copied().collect();
+        let visible_headers: Vec<&String> =
+            visible_headers.iter().take(num_visible).copied().collect();
 
         // Header
         let header_cells = visible_headers.iter().enumerate().map(|(idx, h)| {
@@ -192,7 +200,7 @@ impl QueryPage {
 
             let cells = visible_cells.into_iter().enumerate().map(|(col_idx, c)| {
                 let actual_col_idx = col_idx + self.horizontal_scroll;
-                
+
                 let style = if row_idx == selected_row && actual_col_idx == self.horizontal_scroll {
                     Style::default()
                         .fg(Color::Green)
@@ -238,7 +246,11 @@ impl QueryPage {
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(format!("Results ({} rows){}", self.results.len(), scroll_info))
+                    .title(format!(
+                        "Results ({} rows){}",
+                        self.results.len(),
+                        scroll_info
+                    ))
                     .border_style(match self.focus {
                         Focus::Results => Style::default().fg(Color::Yellow),
                         Focus::Query => Style::default(),

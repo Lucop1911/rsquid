@@ -1,10 +1,10 @@
 use crate::helpers::connection::ConnectionManager;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    Frame,
 };
 
 pub enum ConnectionListAction {
@@ -24,7 +24,13 @@ impl ConnectionListPage {
         Self { list_state }
     }
 
-    pub fn render(&mut self, f: &mut Frame, area: Rect, conn_manager: &ConnectionManager, error: &Option<String>) {
+    pub fn render(
+        &mut self,
+        f: &mut Frame,
+        area: Rect,
+        conn_manager: &ConnectionManager,
+        error: &Option<String>,
+    ) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -35,14 +41,18 @@ impl ConnectionListPage {
             .split(area);
 
         let title = Paragraph::new("Database Client - Connection Manager")
-            .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(title, chunks[0]);
 
         // Lista connessioni
         let connections = conn_manager.load_connections().unwrap_or_default();
-        
+
         let mut items: Vec<ListItem> = connections
             .iter()
             .enumerate()
@@ -58,11 +68,13 @@ impl ConnectionListPage {
             })
             .collect();
 
-        items.push(ListItem::new("+ Create New Connection").style(
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD),
-        ));
+        items.push(
+            ListItem::new("+ Create New Connection").style(
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        );
 
         let list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Connections"))
@@ -86,7 +98,10 @@ impl ConnectionListPage {
         if let Some(err) = error {
             help_lines.push(Line::from(""));
             help_lines.push(Line::from(vec![
-                Span::styled("Error: ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Error: ",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(err, Style::default().fg(Color::Red)),
             ]));
         }

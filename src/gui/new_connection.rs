@@ -1,10 +1,10 @@
 use crate::helpers::connection::Connection;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
-    Frame,
 };
 
 pub enum NewConnectionAction {
@@ -78,7 +78,11 @@ impl NewConnectionPage {
 
         // Title
         let title = Paragraph::new("New Database Connection")
-            .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(title, chunks[0]);
@@ -86,7 +90,10 @@ impl NewConnectionPage {
         // Form fields
         let items: Vec<ListItem> = vec![
             ListItem::new(format!("Name: {}", self.name)),
-            ListItem::new(format!("Database Type: {} (postgres/mysql/sqlite)", self.db_type)),
+            ListItem::new(format!(
+                "Database Type: {} (postgres/mysql/sqlite)",
+                self.db_type
+            )),
             ListItem::new(format!("Host: {}", self.host)),
             ListItem::new(format!("Port: {}", self.port)),
             ListItem::new(format!("Database: {}", self.database)),
@@ -95,7 +102,11 @@ impl NewConnectionPage {
         ];
 
         let list = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("Connection Details"))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Connection Details"),
+            )
             .highlight_style(
                 Style::default()
                     .bg(Color::DarkGray)
@@ -106,18 +117,19 @@ impl NewConnectionPage {
         f.render_stateful_widget(list, chunks[1], &mut self.field_state);
 
         // Help and error
-        let mut help_lines = vec![
-            Line::from(vec![
-                Span::raw("↑↓: Navigate | "),
-                Span::raw("Type: Edit | "),
-                Span::raw("Ctrl+S: Save | "),
-                Span::raw("Esc: Cancel"),
-            ]),
-        ];
+        let mut help_lines = vec![Line::from(vec![
+            Span::raw("↑↓: Navigate | "),
+            Span::raw("Type: Edit | "),
+            Span::raw("Ctrl+S: Save | "),
+            Span::raw("Esc: Cancel"),
+        ])];
 
         if let Some(err) = &self.error {
             help_lines.push(Line::from(vec![
-                Span::styled("Error: ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "Error: ",
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
                 Span::styled(err, Style::default().fg(Color::Red)),
             ]));
         }

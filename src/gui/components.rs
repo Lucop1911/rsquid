@@ -10,7 +10,9 @@ pub fn styled_block(title: &str, focused: bool) -> Block<'_> {
         .borders(Borders::ALL)
         .title(title)
         .border_style(if focused {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
         })
@@ -25,7 +27,9 @@ pub fn help_line<'a>(items: Vec<(&'a str, &'a str)>) -> Line<'a> {
         }
         spans.push(Span::styled(
             *key,
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
         ));
         spans.push(Span::raw(format!(": {}", desc)));
     }
@@ -35,7 +39,10 @@ pub fn help_line<'a>(items: Vec<(&'a str, &'a str)>) -> Line<'a> {
 #[allow(dead_code)]
 pub fn error_line(message: &str) -> Line<'_> {
     Line::from(vec![
-        Span::styled("Error: ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "Error: ",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(message, Style::default().fg(Color::Red)),
     ])
 }
