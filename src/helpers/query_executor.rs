@@ -1,21 +1,21 @@
 use crate::helpers::connection::Connection;
-use anyhow::{Context, Result};
-use sqlx::mysql::{MySqlPool, MySqlPoolOptions, MySqlRow};
-use sqlx::{Column, Row};
+use anyhow::Result;
+use sqlx::any::{ AnyPoolOptions, AnyRow};
+use sqlx::{Column, Row, AnyPool};
 use tokio::time::{timeout, Duration};
 
 pub struct QueryExecutor {
-    pool: MySqlPool,
+    pool: AnyPool,
 }
 
 impl QueryExecutor {
-    /// Create a new executor with a 5-second connection timeout
+    // Executor con timeout di 10 secondi
     pub async fn new(connection: &Connection) -> Result<Self> {
         let conn_str = connection.to_connection_string();
 
         let pool = match timeout(
-            Duration::from_secs(5),
-            MySqlPoolOptions::new()
+            Duration::from_secs(10),
+            AnyPoolOptions::new()
                 .max_connections(5)
                 .connect(&conn_str),
         )
@@ -29,7 +29,7 @@ impl QueryExecutor {
         Ok(Self { pool })
     }
 
-    /// Executes a query, distinguishing between SELECT-like and non-SELECT queries
+    // Esegui query, distinguo tra SELECT-like e non-SELECT queries
     pub async fn execute(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
         let trimmed = query.trim().to_lowercase();
 
@@ -44,9 +44,9 @@ impl QueryExecutor {
         }
     }
 
-    /// Executes SELECT/SHOW/DESCRIBE/EXPLAIN queries
+    // Esegui SELECT/SHOW/DESCRIBE/EXPLAIN queries
     async fn execute_query(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
-        let rows: Vec<MySqlRow> = sqlx::query(query)
+        let rows: Vec<AnyRow> = sqlx::query(query)
             .fetch_all(&self.pool)
             .await
             .map_err(|e| anyhow::anyhow!("SQL execution failed: {:?}", e))?;
@@ -74,7 +74,7 @@ impl QueryExecutor {
         Ok((headers, result_rows))
     }
 
-    /// Executes INSERT/UPDATE/DELETE/other commands
+    // Esegui INSERT/UPDATE/DELETE/other commands
     async fn execute_non_query(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
         let result = sqlx::query(query)
             .execute(&self.pool)
@@ -89,8 +89,8 @@ impl QueryExecutor {
         Ok((headers, rows))
     }
 
-    /// Converts MySQL row values into strings safely, handling NULLs
-    fn row_value_to_string(row: &MySqlRow, index: usize) -> String {
+    // Converto i valori delle righe in strings
+    fn row_value_to_string(row: &AnyRow, index: usize) -> String {
         if let Ok(Some(val)) = row.try_get::<Option<String>, _>(index) {
             return val;
         }
@@ -110,7 +110,7 @@ impl QueryExecutor {
         "NULL".to_string()
     }
 
-    /// Close the pool gracefully
+    // Chiudi la pool
     pub async fn close(self) -> Result<()> {
         self.pool.close().await;
         Ok(())

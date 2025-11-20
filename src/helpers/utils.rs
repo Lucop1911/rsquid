@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-/// Formats a duration into a human-readable string
+#[allow(dead_code)]
 pub fn format_duration(duration: Duration) -> String {
     let secs = duration.as_secs();
     if secs < 60 {
@@ -12,7 +12,7 @@ pub fn format_duration(duration: Duration) -> String {
     }
 }
 
-/// Truncates a string to a maximum length, adding "..." if truncated
+#[allow(dead_code)]
 pub fn truncate_string(s: &str, max_len: usize) -> String {
     if s.len() <= max_len {
         s.to_string()
@@ -21,12 +21,12 @@ pub fn truncate_string(s: &str, max_len: usize) -> String {
     }
 }
 
-/// Validates if a string is a valid database type
+#[allow(dead_code)]
 pub fn is_valid_db_type(db_type: &str) -> bool {
     matches!(db_type, "postgres" | "mysql" | "sqlite")
 }
 
-/// Sanitizes input by removing control characters
+#[allow(dead_code)]
 pub fn sanitize_input(input: &str) -> String {
     input
         .chars()
@@ -34,7 +34,7 @@ pub fn sanitize_input(input: &str) -> String {
         .collect()
 }
 
-/// Checks if a query is a read-only operation
+#[allow(dead_code)]
 pub fn is_readonly_query(query: &str) -> bool {
     let lower = query.trim().to_lowercase();
     lower.starts_with("select")

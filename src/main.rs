@@ -15,20 +15,16 @@ use gui::{App, AppState};
 #[tokio::main]
 async fn main() -> Result<()> {
     sqlx::any::install_default_drivers();
-    // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app state
     let mut app = App::new()?;
 
-    // Run app
     let res = run_app(&mut terminal, &mut app).await;
 
-    // Restore terminal
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -53,7 +49,7 @@ async fn run_app<B: ratatui::backend::Backend>(
 
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                if key.code == KeyCode::Char('q') && app.state == AppState::ConnectionList {
+                if key.code == KeyCode::Char('q') || key.code == KeyCode::Esc && app.state == AppState::ConnectionList {
                     return Ok(());
                 }
                 app.handle_input(key).await?;

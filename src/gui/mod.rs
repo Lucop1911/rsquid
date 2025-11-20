@@ -25,6 +25,7 @@ pub struct App {
     pub new_connection: NewConnectionPage,
     pub query_page: QueryPage,
     pub connection_manager: ConnectionManager,
+    pub error_message: Option<String>,
 }
 
 impl App {
@@ -36,6 +37,7 @@ impl App {
             new_connection: NewConnectionPage::new(),
             query_page: QueryPage::new(),
             connection_manager,
+            error_message: None,
         })
     }
 
@@ -43,7 +45,7 @@ impl App {
         let area = f.area();
         match self.state {
             AppState::ConnectionList => {
-                self.connection_list.render(f, area, &self.connection_manager);
+                self.connection_list.render(f, area, &self.connection_manager, &self.error_message);
             }
             AppState::NewConnection => {
                 self.new_connection.render(f, area);
@@ -55,6 +57,10 @@ impl App {
     }
 
     pub async fn handle_input(&mut self, key: KeyEvent) -> Result<()> {
+        if self.state == AppState::ConnectionList && self.error_message.is_some() {
+            self.error_message = None;
+        }
+
         match self.state {
             AppState::ConnectionList => {
                 if let Some(action) = self.connection_list.handle_input(key) {
@@ -67,8 +73,16 @@ impl App {
                             let connections = self.connection_manager.load_connections()?;
                             if idx < connections.len() {
                                 let conn = connections[idx].clone();
-                                self.query_page.connect(conn).await?;
-                                self.state = AppState::QueryPage;
+                                // Connection attempt
+                                match self.query_page.connect(conn).await {
+                                    Ok(_) => {
+                                        self.state = AppState::QueryPage;
+                                        self.error_message = None;
+                                    }
+                                    Err(e) => {
+                                        self.error_message = Some(format!("Connection failed: {}", e));
+                                    }
+                                }
                             }
                         }
                         ConnectionListAction::DeleteConnection(idx) => {
@@ -85,8 +99,17 @@ impl App {
                         }
                         NewConnectionAction::Save(conn) => {
                             self.connection_manager.save_connection(conn.clone())?;
-                            self.query_page.connect(conn).await?;
-                            self.state = AppState::QueryPage;
+                            // Connection attempt
+                            match self.query_page.connect(conn).await {
+                                Ok(_) => {
+                                    self.state = AppState::QueryPage;
+                                    self.error_message = None;
+                                }
+                                Err(e) => {
+                                    self.state = AppState::ConnectionList;
+                                    self.error_message = Some(format!("Connection failed: {}", e));
+                                }
+                            }
                         }
                     }
                 }

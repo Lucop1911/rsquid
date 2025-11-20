@@ -1,5 +1,4 @@
 use crate::helpers::connection::Connection;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -14,7 +13,7 @@ pub enum NewConnectionAction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum Field {
+pub enum Field {
     Name,
     DbType,
     Host,
@@ -25,16 +24,16 @@ enum Field {
 }
 
 pub struct NewConnectionPage {
-    fields: Vec<Field>,
-    field_state: ListState,
-    name: String,
-    db_type: String,
-    host: String,
-    port: String,
-    database: String,
-    username: String,
-    password: String,
-    error: Option<String>,
+    pub(crate) fields: Vec<Field>,
+    pub(crate) field_state: ListState,
+    pub(crate) name: String,
+    pub(crate) db_type: String,
+    pub(crate) host: String,
+    pub(crate) port: String,
+    pub(crate) database: String,
+    pub(crate) username: String,
+    pub(crate) password: String,
+    pub(crate) error: Option<String>,
 }
 
 impl NewConnectionPage {
@@ -130,59 +129,7 @@ impl NewConnectionPage {
         f.render_widget(help, chunks[2]);
     }
 
-    pub fn handle_input(&mut self, key: KeyEvent) -> Option<NewConnectionAction> {
-        self.error = None;
-
-        match key.code {
-            KeyCode::Up => {
-                let i = self.field_state.selected().unwrap_or(0);
-                if i > 0 {
-                    self.field_state.select(Some(i - 1));
-                }
-                None
-            }
-            KeyCode::Down => {
-                let i = self.field_state.selected().unwrap_or(0);
-                if i < self.fields.len() - 1 {
-                    self.field_state.select(Some(i + 1));
-                }
-                None
-            }
-            KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.validate_and_save()
-            }
-            KeyCode::Esc => Some(NewConnectionAction::Cancel),
-            KeyCode::Char(c) => {
-                let selected = self.field_state.selected().unwrap_or(0);
-                match self.fields[selected] {
-                    Field::Name => self.name.push(c),
-                    Field::DbType => self.db_type.push(c),
-                    Field::Host => self.host.push(c),
-                    Field::Port => self.port.push(c),
-                    Field::Database => self.database.push(c),
-                    Field::Username => self.username.push(c),
-                    Field::Password => self.password.push(c),
-                }
-                None
-            }
-            KeyCode::Backspace => {
-                let selected = self.field_state.selected().unwrap_or(0);
-                match self.fields[selected] {
-                    Field::Name => { self.name.pop(); },
-                    Field::DbType => { self.db_type.pop(); },
-                    Field::Host => { self.host.pop(); },
-                    Field::Port => { self.port.pop(); },
-                    Field::Database => { self.database.pop(); },
-                    Field::Username => { self.username.pop(); },
-                    Field::Password => { self.password.pop(); },
-                }
-                None
-            }
-            _ => None,
-        }
-    }
-
-    fn validate_and_save(&mut self) -> Option<NewConnectionAction> {
+    pub fn validate_and_save(&mut self) -> Option<NewConnectionAction> {
         if self.name.is_empty() {
             self.error = Some("Name is required".to_string());
             return None;
@@ -194,6 +141,10 @@ impl NewConnectionPage {
         if self.host.is_empty() {
             self.error = Some("Host is required".to_string());
             return None;
+        }
+
+        if self.host == "127.0.0.1" {
+            self.host = "localhost".to_string();
         }
 
         let conn = Connection {
