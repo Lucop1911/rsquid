@@ -1,7 +1,7 @@
+mod components;
 mod connection_list;
 mod new_connection;
 mod query_page;
-mod components;
 
 pub use connection_list::*;
 pub use new_connection::*;
@@ -45,7 +45,8 @@ impl App {
         let area = f.area();
         match self.state {
             AppState::ConnectionList => {
-                self.connection_list.render(f, area, &self.connection_manager, &self.error_message);
+                self.connection_list
+                    .render(f, area, &self.connection_manager, &self.error_message);
             }
             AppState::NewConnection => {
                 self.new_connection.render(f, area);
@@ -63,7 +64,7 @@ impl App {
 
         match self.state {
             AppState::ConnectionList => {
-                if let Some(action) = self.connection_list.handle_input(key) {
+                if let Some(action) = self.connection_list.handle_input(key, key.kind) {
                     match action {
                         ConnectionListAction::NewConnection => {
                             self.state = AppState::NewConnection;
@@ -80,7 +81,8 @@ impl App {
                                         self.error_message = None;
                                     }
                                     Err(e) => {
-                                        self.error_message = Some(format!("Connection failed: {}", e));
+                                        self.error_message =
+                                            Some(format!("Connection failed: {}", e));
                                     }
                                 }
                             }
@@ -92,7 +94,7 @@ impl App {
                 }
             }
             AppState::NewConnection => {
-                if let Some(action) = self.new_connection.handle_input(key) {
+                if let Some(action) = self.new_connection.handle_input(key, key.kind) {
                     match action {
                         NewConnectionAction::Cancel => {
                             self.state = AppState::ConnectionList;
@@ -115,7 +117,7 @@ impl App {
                 }
             }
             AppState::QueryPage => {
-                if let Some(action) = self.query_page.handle_input(key).await? {
+                if let Some(action) = self.query_page.handle_input(key, key.kind).await? {
                     match action {
                         QueryPageAction::Back => {
                             self.query_page.disconnect().await;

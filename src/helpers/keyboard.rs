@@ -1,9 +1,13 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, KeyEventKind};
 use anyhow::Result;
 use crate::{gui::{ConnectionListAction, ConnectionListPage, Field, Focus, NewConnectionAction, NewConnectionPage, QueryPage, QueryPageAction}, helpers::connection::ConnectionManager};
 
 impl QueryPage {
-    pub async fn handle_input(&mut self, key: KeyEvent) -> Result<Option<QueryPageAction>> {
+    pub async fn handle_input(&mut self, key: KeyEvent, kind: KeyEventKind) -> Result<Option<QueryPageAction>> {
+        if kind != KeyEventKind::Press {
+            return Ok(None);
+        }
+        
         match key.code {
             KeyCode::Esc => Ok(Some(QueryPageAction::Back)),
             KeyCode::Tab => {
@@ -126,7 +130,11 @@ impl QueryPage {
 }
 
 impl ConnectionListPage {
-    pub fn handle_input(&mut self, key: KeyEvent) -> Option<ConnectionListAction> {
+    pub fn handle_input(&mut self, key: KeyEvent, kind: KeyEventKind) -> Option<ConnectionListAction> {
+        if kind != KeyEventKind::Press {
+            return None;
+        }
+
         match key.code {
             KeyCode::Up => {
                 let i = self.list_state.selected().unwrap_or(0);
@@ -166,7 +174,12 @@ impl ConnectionListPage {
 }
 
 impl NewConnectionPage {
-    pub fn handle_input(&mut self, key: KeyEvent) -> Option<NewConnectionAction> {
+    pub fn handle_input(&mut self, key: KeyEvent, kind: KeyEventKind) -> Option<NewConnectionAction> {
+
+        if kind != KeyEventKind::Press {
+            return None;
+        }
+
         self.error = None;
 
         match key.code {
