@@ -1,7 +1,7 @@
 use crate::helpers::connection::Connection;
 use anyhow::Result;
 use sqlx::any::{ AnyPoolOptions, AnyRow};
-use sqlx::{Row, Column, TypeInfo, AnyPool};
+use sqlx::{AnyPool, Column, Row, ValueRef};
 use tokio::time::{timeout, Duration};
 
 pub struct QueryExecutor {
@@ -91,39 +91,58 @@ impl QueryExecutor {
 
     // Converto i valori delle righe in strings
     fn row_value_to_string(row: &AnyRow, index: usize) -> String {
-        if let Ok(opt) = row.try_get::<Option<String>, usize>(index) {
-            return match opt {
-                Some(s) => s,
-                None => "NULL".to_string(),
-            };
-        }
-
-        if let Ok(v) = row.try_get::<i64, usize>(index) {
-            return v.to_string();
-        }
-        if let Ok(v) = row.try_get::<i32, usize>(index) {
-            return v.to_string();
-        }
-        if let Ok(v) = row.try_get::<f64, usize>(index) {
-            return format!("{:.6}", v);
-        }
-        if let Ok(v) = row.try_get::<bool, usize>(index) {
-            return v.to_string();
-        }
-
-        if let Ok(bytes) = row.try_get::<Vec<u8>, usize>(index) {
-            if bytes.len() <= 32 {
-                return format!(
-                    "0x{}",
-                    bytes.iter().map(|b| format!("{:02x}", b)).collect::<String>()
-                );
-            } else {
-                return format!("<BINARY {} bytes>", bytes.len());
+        let value_ref = row.try_get_raw(index);
+        
+        // NULL
+        if let Ok(val) = value_ref {
+            if val.is_null() {
+                return "NULL".to_string();
             }
         }
-
-        let column = &row.columns()[index];
-        format!("<{}>", column.type_info().name())
+                
+        // String
+        if let Ok(v) = row.try_get::<String, _>(index) {
+            return v;
+        }
+        
+        // Integers
+        if let Ok(v) = row.try_get::<i32, _>(index) {
+            return v.to_string();
+        }
+        if let Ok(v) = row.try_get::<i64, _>(index) {
+            return v.to_string();
+        }
+        
+        // Floating point
+        if let Ok(v) = row.try_get::<f32, _>(index) {
+            return v.to_string();
+        }
+        if let Ok(v) = row.try_get::<f64, _>(index) {
+            return v.to_string();
+        }
+        
+        // Bool
+        if let Ok(v) = row.try_get::<bool, _>(index) {
+            return v.to_string();
+        }
+        
+        // Byte slice to UTF-8
+        if let Ok(bytes) = row.try_get::<&[u8], _>(index) {
+            if let Ok(s) = std::str::from_utf8(bytes) {
+                return s.to_string();
+            }
+            return format!("<binary: {} bytes>", bytes.len());
+        }
+        
+        // Byte vector to UTF-8 string
+        if let Ok(bytes) = row.try_get::<Vec<u8>, _>(index) {
+            match String::from_utf8(bytes) {
+                Ok(s) => return s,
+                Err(e) => return format!("<binary: {} bytes>", e.as_bytes().len()),
+            }
+        }
+                
+        "<unknown>".to_string()
     }
 
     // Chiudi la pool
