@@ -168,6 +168,16 @@ impl ConnectionListPage {
                     None
                 }
             }
+            KeyCode::Char('m') => {
+                let selected = self.list_state.selected().unwrap_or(0);
+                let connections = ConnectionManager::new().ok()?.load_connections().ok()?;
+                
+                if selected < connections.len() {
+                    Some(ConnectionListAction::ModifyConnection(selected))
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }

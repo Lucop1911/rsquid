@@ -90,6 +90,15 @@ impl App {
                         ConnectionListAction::DeleteConnection(idx) => {
                             self.connection_manager.delete_connection(idx)?;
                         }
+                        ConnectionListAction::ModifyConnection(idx) => {
+                            let connections = self.connection_manager.load_connections()?;
+                            if idx < connections.len() {
+                                self.new_connection.reset();
+                                self.new_connection.load_connection(&connections[idx]);
+                                self.new_connection.modifying_index = Some(idx);
+                                self.state = AppState::NewConnection;
+                            }
+                        }
                     }
                 }
             }
@@ -112,6 +121,11 @@ impl App {
                                     self.error_message = Some(format!("Connection failed: {}", e));
                                 }
                             }
+                        }
+                        NewConnectionAction::Update(idx, conn) => {
+                            self.connection_manager
+                                .update_connection(idx, conn.clone())?;
+                            self.state = AppState::ConnectionList;
                         }
                     }
                 }

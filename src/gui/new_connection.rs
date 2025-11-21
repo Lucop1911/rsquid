@@ -10,6 +10,7 @@ use ratatui::{
 pub enum NewConnectionAction {
     Cancel,
     Save(Connection),
+    Update(usize, Connection),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,6 +35,7 @@ pub struct NewConnectionPage {
     pub(crate) username: String,
     pub(crate) password: String,
     pub(crate) error: Option<String>,
+    pub(crate) modifying_index: Option<usize>,
 }
 
 impl NewConnectionPage {
@@ -59,6 +61,7 @@ impl NewConnectionPage {
             username: String::new(),
             password: String::new(),
             error: None,
+            modifying_index: None,
         }
     }
 
@@ -77,7 +80,13 @@ impl NewConnectionPage {
             .split(area);
 
         // Title
-        let title = Paragraph::new("New Database Connection")
+        let title_text = if self.modifying_index.is_some() {
+            "Modify Database Connection"
+        } else {
+            "New Database Connection"
+        };
+
+        let title = Paragraph::new(title_text)
             .style(
                 Style::default()
                     .fg(Color::Cyan)
@@ -85,6 +94,7 @@ impl NewConnectionPage {
             )
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::ALL));
+
         f.render_widget(title, chunks[0]);
 
         // Form fields
@@ -169,6 +179,22 @@ impl NewConnectionPage {
             password: self.password.clone(),
         };
 
-        Some(NewConnectionAction::Save(conn))
+        if let Some(index) = self.modifying_index {
+            Some(NewConnectionAction::Update(index, conn))
+        } else {
+            Some(NewConnectionAction::Save(conn))
+        }
+    }
+
+    pub fn load_connection(&mut self, connection: &Connection) {
+        self.name = connection.name.clone();
+        self.db_type = connection.db_type.clone();
+        self.host = connection.host.clone();
+        self.port = connection.port.to_string();
+        self.database = connection.database.clone();
+        self.username = connection.username.clone();
+        self.password = connection.password.clone();
+        self.error = None;
+        self.field_state.select(Some(0));
     }
 }

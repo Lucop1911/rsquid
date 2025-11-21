@@ -11,6 +11,7 @@ pub enum ConnectionListAction {
     NewConnection,
     SelectConnection(usize),
     DeleteConnection(usize),
+    ModifyConnection(usize)
 }
 
 pub struct ConnectionListPage {
@@ -91,6 +92,7 @@ impl ConnectionListPage {
         let mut help_lines = vec![Line::from(vec![
             Span::raw("↑↓: Navigate | "),
             Span::raw("Enter: Select | "),
+            Span::raw("m: Modify | "),
             Span::raw("d: Delete | "),
             Span::raw("Esc: Quit"),
         ])];
