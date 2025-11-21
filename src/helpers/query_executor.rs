@@ -1,7 +1,7 @@
 use crate::helpers::connection::Connection;
 use anyhow::Result;
 use sqlx::any::{ AnyPoolOptions, AnyRow};
-use sqlx::{Column, Row, AnyPool};
+use sqlx::{Row, Column, TypeInfo, AnyPool};
 use tokio::time::{timeout, Duration};
 
 pub struct QueryExecutor {
@@ -91,23 +91,39 @@ impl QueryExecutor {
 
     // Converto i valori delle righe in strings
     fn row_value_to_string(row: &AnyRow, index: usize) -> String {
-        if let Ok(Some(val)) = row.try_get::<Option<String>, _>(index) {
-            return val;
-        }
-        if let Ok(Some(val)) = row.try_get::<Option<i32>, _>(index) {
-            return val.to_string();
-        }
-        if let Ok(Some(val)) = row.try_get::<Option<i64>, _>(index) {
-            return val.to_string();
-        }
-        if let Ok(Some(val)) = row.try_get::<Option<f64>, _>(index) {
-            return val.to_string();
-        }
-        if let Ok(Some(val)) = row.try_get::<Option<bool>, _>(index) {
-            return val.to_string();
+        if let Ok(opt) = row.try_get::<Option<String>, usize>(index) {
+            return match opt {
+                Some(s) => s,
+                None => "NULL".to_string(),
+            };
         }
 
-        "NULL".to_string()
+        if let Ok(v) = row.try_get::<i64, usize>(index) {
+            return v.to_string();
+        }
+        if let Ok(v) = row.try_get::<i32, usize>(index) {
+            return v.to_string();
+        }
+        if let Ok(v) = row.try_get::<f64, usize>(index) {
+            return format!("{:.6}", v);
+        }
+        if let Ok(v) = row.try_get::<bool, usize>(index) {
+            return v.to_string();
+        }
+
+        if let Ok(bytes) = row.try_get::<Vec<u8>, usize>(index) {
+            if bytes.len() <= 32 {
+                return format!(
+                    "0x{}",
+                    bytes.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+                );
+            } else {
+                return format!("<BINARY {} bytes>", bytes.len());
+            }
+        }
+
+        let column = &row.columns()[index];
+        format!("<{}>", column.type_info().name())
     }
 
     // Chiudi la pool
