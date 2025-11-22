@@ -1,4 +1,4 @@
-# rsquid
+# RUST DATABASE CLIENT
 A rust terminal user interface built to interact with databases.
 
 ---
@@ -17,9 +17,33 @@ A rust terminal user interface built to interact with databases.
 
 # Installation
 
-## Windows
+You can either download a pre-built binary or build from source.
 
-### Step 1: Install Rust
+## Option 1: Download Pre-Built Binary (Recommended)
+
+### Windows
+1. Go to the [Releases page](https://github.com/Lucop1911/rsquid/releases)
+2. Download `rsquid.exe` from the latest release
+3. Move `rsquid.exe` to a directory in your PATH (e.g., `%USERPROFILE%\.local\bin` or `C:\Program Files\rsquid`)
+4. Run from terminal: `rsquid`
+
+### Linux
+1. Go to the [Releases page](https://github.com/Lucop1911/rsquid/releases)
+2. Download `rsquid` from the latest release
+3. Make it executable and move to PATH:
+```bash
+chmod +x rsquid
+mv rsquid ~/.local/bin/
+```
+4. Run from terminal: `rsquid`
+
+---
+
+## Option 2: Build from Source
+
+### Windows
+
+#### Step 1: Install Rust
 
 1. Download the Rust installer from [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 2. Run the installer and ensure **"Add Rust to PATH"** is enabled
@@ -45,25 +69,25 @@ git --version
 Open PowerShell or Windows Terminal and run:
 
 ```powershell
-git clone https://github.com/Lucop1911/rsquid.git
-cd rsquid
+git clone https://github.com/Lucop1911/rust-db-client.git
+cd rust-db-client
 cargo build --release
 ```
 
-The compiled binary will be at: `target\release\rsquid.exe`
+The compiled binary will be at: `target\release\rust-db-client.exe`
 
 ### Step 4: Install to PATH
 
 Choose one of the following options:
 
-#### Option A: User Installation (Recommended)
+##### Option A: User Installation (Recommended)
 
 ```powershell
 # Create bin directory if it doesn't exist
 mkdir "$env:USERPROFILE\.local\bin" -ErrorAction SilentlyContinue
 
 # Copy the binary
-copy target\release\rsquid.exe "$env:USERPROFILE\.local\bin"
+copy target\release\rust-db-client.exe "$env:USERPROFILE\.local\bin"
 ```
 
 Then add `%USERPROFILE%\.local\bin` to your PATH:
@@ -73,22 +97,22 @@ Then add `%USERPROFILE%\.local\bin` to your PATH:
 4. Click **New** and add: `%USERPROFILE%\.local\bin`
 5. Click **OK** on all dialogs
 
-#### Option B: System-Wide Installation (Requires Admin)
+##### Option B: System-Wide Installation (Requires Admin)
 
 ```powershell
 # Run as Administrator
-mkdir "C:\Program Files\rsquid" -ErrorAction SilentlyContinue
-copy target\release\rsquid.exe "C:\Program Files\rsquid"
+mkdir "C:\Program Files\rust-db-client" -ErrorAction SilentlyContinue
+copy target\release\rust-db-client.exe "C:\Program Files\rust-db-client"
 ```
 
-Add `C:\Program Files\rsquid` to your system PATH using the same steps as Option A.
+Add `C:\Program Files\rust-db-client` to your system PATH using the same steps as Option A.
 
 ### Step 5: Run the Application
 
 Restart your terminal, then run:
 
 ```powershell
-rsquid
+rust-db-client
 ```
 
 ### Updating
@@ -96,12 +120,12 @@ rsquid
 To update to the latest version:
 
 ```powershell
-cd rsquid
+cd rust-db-client
 git pull
 cargo build --release
 ```
 
-Then replace the existing executable with the newly built `target\release\rsquid.exe`.
+Then replace the existing executable with the newly built `target\release\rust-db-client.exe`.
 
 ---
 
@@ -129,29 +153,29 @@ cargo --version
 git --version
 ```
 
-### Step 2: Clone and Build
+#### Step 2: Clone and Build
 
 ```bash
-git clone https://github.com/Lucop1911/rsquid.git
-cd rsquid
+git clone https://github.com/Lucop1911/rust-db-client.git
+cd rust-db-client
 cargo build --release
 ```
 
-The compiled binary will be at: `target/release/rsquid`
+The compiled binary will be at: `target/release/rust-db-client`
 
 ### Step 3: Install the Binary
 
 Make the binary executable and move it to a directory in your PATH:
 
-#### Option A: User Installation (Recommended)
+##### Option A: User Installation (Recommended)
 
 ```bash
 # Create bin directory if it doesn't exist
 mkdir -p ~/.local/bin
 
 # Make executable and copy
-chmod +x target/release/rsquid
-cp target/release/rsquid~/.local/bin/
+chmod +x target/release/rust-db-client
+cp target/release/rust-db-client ~/.local/bin/
 ```
 
 Ensure `~/.local/bin` is in your PATH by adding this to your `~/.bashrc` or `~/.zshrc`:
@@ -166,17 +190,17 @@ Then reload your shell:
 source ~/.bashrc  # or source ~/.zshrc
 ```
 
-#### Option B: System-Wide Installation (Requires sudo)
+##### Option B: System-Wide Installation (Requires sudo)
 
 ```bash
-chmod +x target/release/rsquid
-sudo cp target/release/rsquid/usr/local/bin/
+chmod +x target/release/rust-db-client
+sudo cp target/release/rust-db-client /usr/local/bin/
 ```
 
 ### Step 4: Run the Application
 
 ```bash
-rsquid
+rust-db-client
 ```
 
 ### Updating
@@ -184,7 +208,7 @@ rsquid
 To update to the latest version:
 
 ```bash
-cd rsquid
+cd rust-db-client
 git pull
 cargo build --release
 ```
@@ -193,27 +217,14 @@ Then replace the existing binary in your installation path:
 
 ```bash
 # For user installation
-cp target/release/rsquid~/.local/bin/
+cp target/release/rust-db-client ~/.local/bin/
 
 # For system-wide installation
-sudo cp target/release/rsquid/usr/local/bin/
+sudo cp target/release/rust-db-client /usr/local/bin/
 ```
 
 ---
 
-## Troubleshooting
-
-### Command not found after installation
-- **Windows**: Restart your terminal after adding to PATH
-- **Linux**: Run `source ~/.bashrc` or restart your terminal
-
-### Build errors
-Ensure you have Rust 1.80 or later:
-```bash
-rustup update
-```
-
----
 
 ## License
 This project is licensed under the **Apache License 2.0**.  
