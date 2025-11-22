@@ -94,7 +94,7 @@ impl ConnectionListPage {
             Span::raw("Enter: Select | "),
             Span::raw("m: Modify | "),
             Span::raw("d: Delete | "),
-            Span::raw("Esc: Quit"),
+            Span::raw("Esc - q: Quit"),
         ])];
 
         if let Some(err) = error {

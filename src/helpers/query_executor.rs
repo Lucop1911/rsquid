@@ -9,12 +9,12 @@ pub struct QueryExecutor {
 }
 
 impl QueryExecutor {
-    // Executor con timeout di 10 secondi
+    // Executor con timeout di 5 secondi
     pub async fn new(connection: &Connection) -> Result<Self> {
         let conn_str = connection.to_connection_string();
 
         let pool = match timeout(
-            Duration::from_secs(10),
+            Duration::from_secs(5),
             AnyPoolOptions::new()
                 .max_connections(5)
                 .connect(&conn_str),

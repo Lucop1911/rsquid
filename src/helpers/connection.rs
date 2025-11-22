@@ -95,7 +95,6 @@ impl ConnectionManager {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn update_connection(&self, index: usize, connection: Connection) -> Result<()> {
         let mut connections = self.load_connections()?;
         
