@@ -1,4 +1,4 @@
-# SQUID
+# rsquid
 A rust terminal user interface built to interact with databases.
 
 ---
@@ -45,12 +45,12 @@ git --version
 Open PowerShell or Windows Terminal and run:
 
 ```powershell
-git clone https://github.com/Lucop1911/squid.git
-cd squid
+git clone https://github.com/Lucop1911/rsquid.git
+cd rsquid
 cargo build --release
 ```
 
-The compiled binary will be at: `target\release\squid.exe`
+The compiled binary will be at: `target\release\rsquid.exe`
 
 ### Step 4: Install to PATH
 
@@ -63,7 +63,7 @@ Choose one of the following options:
 mkdir "$env:USERPROFILE\.local\bin" -ErrorAction SilentlyContinue
 
 # Copy the binary
-copy target\release\squid.exe "$env:USERPROFILE\.local\bin"
+copy target\release\rsquid.exe "$env:USERPROFILE\.local\bin"
 ```
 
 Then add `%USERPROFILE%\.local\bin` to your PATH:
@@ -77,18 +77,18 @@ Then add `%USERPROFILE%\.local\bin` to your PATH:
 
 ```powershell
 # Run as Administrator
-mkdir "C:\Program Files\squid" -ErrorAction SilentlyContinue
-copy target\release\squid.exe "C:\Program Files\squid"
+mkdir "C:\Program Files\rsquid" -ErrorAction SilentlyContinue
+copy target\release\rsquid.exe "C:\Program Files\rsquid"
 ```
 
-Add `C:\Program Files\squid` to your system PATH using the same steps as Option A.
+Add `C:\Program Files\rsquid` to your system PATH using the same steps as Option A.
 
 ### Step 5: Run the Application
 
 Restart your terminal, then run:
 
 ```powershell
-squid
+rsquid
 ```
 
 ### Updating
@@ -96,12 +96,12 @@ squid
 To update to the latest version:
 
 ```powershell
-cd squid
+cd rsquid
 git pull
 cargo build --release
 ```
 
-Then replace the existing executable with the newly built `target\release\squid.exe`.
+Then replace the existing executable with the newly built `target\release\rsquid.exe`.
 
 ---
 
@@ -132,12 +132,12 @@ git --version
 ### Step 2: Clone and Build
 
 ```bash
-git clone https://github.com/Lucop1911/squid.git
-cd squid
+git clone https://github.com/Lucop1911/rsquid.git
+cd rsquid
 cargo build --release
 ```
 
-The compiled binary will be at: `target/release/squid`
+The compiled binary will be at: `target/release/rsquid`
 
 ### Step 3: Install the Binary
 
@@ -150,8 +150,8 @@ Make the binary executable and move it to a directory in your PATH:
 mkdir -p ~/.local/bin
 
 # Make executable and copy
-chmod +x target/release/squid
-cp target/release/squid~/.local/bin/
+chmod +x target/release/rsquid
+cp target/release/rsquid~/.local/bin/
 ```
 
 Ensure `~/.local/bin` is in your PATH by adding this to your `~/.bashrc` or `~/.zshrc`:
@@ -169,14 +169,14 @@ source ~/.bashrc  # or source ~/.zshrc
 #### Option B: System-Wide Installation (Requires sudo)
 
 ```bash
-chmod +x target/release/squid
-sudo cp target/release/squid/usr/local/bin/
+chmod +x target/release/rsquid
+sudo cp target/release/rsquid/usr/local/bin/
 ```
 
 ### Step 4: Run the Application
 
 ```bash
-squid
+rsquid
 ```
 
 ### Updating
@@ -184,7 +184,7 @@ squid
 To update to the latest version:
 
 ```bash
-cd squid
+cd rsquid
 git pull
 cargo build --release
 ```
@@ -193,10 +193,10 @@ Then replace the existing binary in your installation path:
 
 ```bash
 # For user installation
-cp target/release/squid~/.local/bin/
+cp target/release/rsquid~/.local/bin/
 
 # For system-wide installation
-sudo cp target/release/squid/usr/local/bin/
+sudo cp target/release/rsquid/usr/local/bin/
 ```
 
 ---
