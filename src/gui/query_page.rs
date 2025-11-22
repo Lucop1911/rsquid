@@ -241,6 +241,23 @@ impl QueryPage {
             format!(" [Row {}/{}] ", selected_row + 1, self.results.len())
         };
 
+        let row_highlight = {
+            #[cfg(target_os = "windows")]
+            {
+                Style::default()
+                    .fg(Color::White)
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
+            }
+
+            #[cfg(not(target_os = "windows"))]
+            {
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
+            }
+        };
+
         let table = Table::new(rows, widths)
             .header(header)
             .block(
@@ -256,11 +273,7 @@ impl QueryPage {
                         Focus::Query => Style::default(),
                     }),
             )
-            .row_highlight_style(
-                Style::default()
-                    .bg(Color::DarkGray)
-                    .add_modifier(Modifier::BOLD),
-            )
+            .row_highlight_style(row_highlight)
             .highlight_symbol(">> ");
 
         f.render_stateful_widget(table, area, &mut self.table_state);

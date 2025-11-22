@@ -110,6 +110,23 @@ impl NewConnectionPage {
             ListItem::new(format!("Username: {}", self.username)),
             ListItem::new(format!("Password: {}", "*".repeat(self.password.len()))),
         ];
+        
+        let highlight = {
+            #[cfg(target_os = "windows")]
+            {
+                Style::default()
+                    .fg(Color::White)
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
+            }
+
+            #[cfg(not(target_os = "windows"))]
+            {
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
+            }
+        };
 
         let list = List::new(items)
             .block(
@@ -117,11 +134,7 @@ impl NewConnectionPage {
                     .borders(Borders::ALL)
                     .title("Connection Details"),
             )
-            .highlight_style(
-                Style::default()
-                    .bg(Color::DarkGray)
-                    .add_modifier(Modifier::BOLD),
-            )
+            .highlight_style(highlight)
             .highlight_symbol(">> ");
 
         f.render_stateful_widget(list, chunks[1], &mut self.field_state);

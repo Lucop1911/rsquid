@@ -76,14 +76,26 @@ impl ConnectionListPage {
                     .add_modifier(Modifier::BOLD),
             ),
         );
+        let highlight = {
+            #[cfg(target_os = "windows")]
+            {
+                Style::default()
+                    .fg(Color::White)
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
+            }
+
+            #[cfg(not(target_os = "windows"))]
+            {
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
+            }
+        };
 
         let list = List::new(items)
             .block(Block::default().borders(Borders::ALL).title("Connections"))
-            .highlight_style(
-                Style::default()
-                    .bg(Color::DarkGray)
-                    .add_modifier(Modifier::BOLD),
-            )
+            .highlight_style(highlight)
             .highlight_symbol(">> ");
 
         f.render_stateful_widget(list, chunks[1], &mut self.list_state);
