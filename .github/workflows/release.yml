@@ -40,13 +40,13 @@ jobs:
       - name: Prepare binary
         run: |
           mkdir -p dist
-          cp target/release/rust-db-client dist/rust-db-client
+          cp target/release/rsquid dist/rsquid
 
       - name: Upload linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rust-db-client-linux
-          path: dist/rust-db-client
+          name: rsquid-linux
+          path: dist/rsquid
 
   build-windows:
     runs-on: windows-latest
@@ -77,13 +77,13 @@ jobs:
       - name: Prepare binary (Windows)
         run: |
           New-Item -ItemType Directory -Force -Path dist
-          Copy-Item -Path target\release\rust-db-client.exe -Destination dist\rust-db-client.exe -Force
+          Copy-Item -Path target\release\rsquid.exe -Destination dist\rsquid.exe -Force
 
       - name: Upload windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rust-db-client-windows
-          path: dist/rust-db-client.exe
+          name: rsquid-windows
+          path: dist/rsquid.exe
 
   publish:
     needs: [build-linux, build-windows]
@@ -92,21 +92,21 @@ jobs:
       - name: Download linux artifact
         uses: actions/download-artifact@v4
         with:
-          name: rust-db-client-linux
+          name: rsquid-linux
           path: downloaded
 
       - name: Download windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: rust-db-client-windows
+          name: rsquid-windows
           path: downloaded
 
       - name: Prepare dist for release
         run: |
           mkdir -p dist
           # downloaded artifact names are preserved:
-          mv downloaded/rust-db-client dist/rust-db-client || true
-          mv downloaded/rust-db-client.exe dist/rust-db-client.exe || true
+          mv downloaded/rsquid dist/rsquid || true
+          mv downloaded/rsquid.exe dist/rsquid.exe || true
           ls -la dist
 
       - name: Publish Release

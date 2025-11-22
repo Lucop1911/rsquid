@@ -1164,7 +1164,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-db-client"
+name = "rsquid"
 version = "0.1.0"
 dependencies = [
  "anyhow",
