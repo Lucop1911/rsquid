@@ -18,7 +18,7 @@ impl QueryPage {
                 };
                 Ok(None)
             }
-            KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 Ok(Some(QueryPageAction::OpenHistory))
             }
             KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
@@ -265,6 +265,13 @@ impl HistoryPage {
             KeyCode::Enter => {
                 if let Some(query) = self.get_selected_query() {
                     Some(HistoryPageAction::SelectQuery(query))
+                } else {
+                    None
+                }
+            }
+            KeyCode::Char('d') => {
+                if let Some(query) = self.get_selected_query() {
+                    Some(HistoryPageAction::DeleteQuery(query))
                 } else {
                     None
                 }

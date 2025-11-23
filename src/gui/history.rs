@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Ok, Result};
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -11,6 +11,7 @@ use std::path::PathBuf;
 pub enum HistoryPageAction {
     Back,
     SelectQuery(String),
+    DeleteQuery(String),
 }
 
 pub struct HistoryManager {
@@ -154,7 +155,7 @@ impl HistoryPage {
         let help_text = if history.is_empty() {
             "Esc: Back"
         } else {
-            "↑↓: Navigate | Enter: Use Query | c: Clear History | Esc: Back"
+            "↑↓: Navigate | Enter: Use Query | d: Delete Selection | c: Clear History | Esc: Back"
         };
 
         let help = Paragraph::new(help_text)
@@ -199,6 +200,19 @@ impl HistoryPage {
     pub fn clear_history(&mut self) -> Result<()> {
         self.history_manager.clear_history()?;
         self.list_state.select(Some(0));
+        Ok(())
+    }
+
+    pub fn delete_query(&self, query_string: String) -> Result<()> {
+        let mut history = self.history_manager.load_history().unwrap_or_default();
+
+        if let Some(index) = history.iter().position(|s| s == &query_string) {
+            history.remove(index);
+        }
+
+        let content = serde_json::to_string_pretty(&history)?;
+        fs::write(&self.history_manager.config_path, content)?;
+
         Ok(())
     }
 }

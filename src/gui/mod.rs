@@ -151,6 +151,9 @@ impl App {
                             self.query_page.set_query(query);
                             self.state = AppState::QueryPage;
                         }
+                        HistoryPageAction::DeleteQuery(query) => {
+                            self.history_page.delete_query(query).ok();
+                        }
                     }
                 }
             }
