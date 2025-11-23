@@ -9,6 +9,7 @@ use ratatui::{
 
 pub enum QueryPageAction {
     Back,
+    OpenHistory,
 }
 
 pub enum Focus {
@@ -69,6 +70,12 @@ impl QueryPage {
         self.connection = None;
     }
 
+    pub fn set_query(&mut self, query: String) {
+        self.query = query;
+        self.cursor_position = self.query.chars().count();
+        self.focus = Focus::Query;
+    }
+
     pub fn render(&mut self, f: &mut Frame, area: Rect) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -117,9 +124,9 @@ impl QueryPage {
 
         // Help footer
         let help_text = if matches!(self.focus, Focus::Results) && !self.results.is_empty() {
-            "Up/Down: Scroll Rows | Left/Right: Scroll Columns | PgUp/PgDn: Page | T/B: Top/Bottom | Ctrl+E: Execute | Ctrl+C: Clear | Tab: Switch Focus | Esc: Back"
+            "Up/Down: Scroll Rows | Left/Right: Scroll Columns | PgUp/PgDn: Page | T/B: Top/Bottom | Ctrl+E: Execute | Ctrl+C: Clear | Ctrl+H: History | Tab: Switch Focus | Esc: Back"
         } else {
-            "Ctrl+E: Execute | Ctrl+C: Clear | Tab: Switch Focus | Esc: Back"
+            "Ctrl+E: Execute | Ctrl+C: Clear | Ctrl+H: History | Tab: Switch Focus | Esc: Back"
         };
 
         let help = Paragraph::new(help_text)
@@ -168,7 +175,7 @@ impl QueryPage {
     fn render_table(&mut self, f: &mut Frame, area: Rect) {
         let selected_row = self.table_state.selected().unwrap_or(0);
 
-        // Visible columns based on horizontal scroll
+        // Visible columns
         let visible_headers: Vec<&String> =
             self.headers.iter().skip(self.horizontal_scroll).collect();
         let num_visible = visible_headers.len().min(10); // Show max 10 columns at once
@@ -342,6 +349,11 @@ impl QueryPage {
                     self.results = rows;
                     if !self.results.is_empty() {
                         self.table_state.select(Some(0));
+                    }
+                    
+                    // Save query
+                    if let Ok(history_manager) = crate::gui::history::HistoryManager::new() {
+                        let _ = history_manager.save_query(self.query.clone());
                     }
                 }
                 Err(e) => {

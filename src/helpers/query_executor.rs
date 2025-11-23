@@ -9,7 +9,7 @@ pub struct QueryExecutor {
 }
 
 impl QueryExecutor {
-    // Executor con timeout di 5 secondi
+    // Executor, 5 sec timeout
     pub async fn new(connection: &Connection) -> Result<Self> {
         let conn_str = connection.to_connection_string();
 
@@ -29,7 +29,7 @@ impl QueryExecutor {
         Ok(Self { pool })
     }
 
-    // Esegui query, distinguo tra SELECT-like e non-SELECT queries
+    // Execute query, distinguish from SELECT-like and non-SELECT queries
     pub async fn execute(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
         let trimmed = query.trim().to_lowercase();
 
@@ -44,7 +44,7 @@ impl QueryExecutor {
         }
     }
 
-    // Esegui SELECT/SHOW/DESCRIBE/EXPLAIN queries
+    // Execute SELECT/SHOW/DESCRIBE/EXPLAIN queries
     async fn execute_query(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
         let rows: Vec<AnyRow> = sqlx::query(query)
             .fetch_all(&self.pool)
@@ -74,7 +74,7 @@ impl QueryExecutor {
         Ok((headers, result_rows))
     }
 
-    // Esegui INSERT/UPDATE/DELETE/other commands
+    // Execute INSERT/UPDATE/DELETE/other commands
     async fn execute_non_query(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
         let result = sqlx::query(query)
             .execute(&self.pool)
@@ -89,7 +89,7 @@ impl QueryExecutor {
         Ok((headers, rows))
     }
 
-    // Converto i valori delle righe in strings
+    // Convert types
     fn row_value_to_string(row: &AnyRow, index: usize) -> String {
         let value_ref = row.try_get_raw(index);
         
@@ -145,7 +145,7 @@ impl QueryExecutor {
         "<unknown>".to_string()
     }
 
-    // Chiudi la pool
+    // Close pool
     pub async fn close(self) -> Result<()> {
         self.pool.close().await;
         Ok(())

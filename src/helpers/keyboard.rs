@@ -1,6 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, KeyEventKind};
 use anyhow::Result;
-use crate::{gui::{ConnectionListAction, ConnectionListPage, Field, Focus, NewConnectionAction, NewConnectionPage, QueryPage, QueryPageAction}, helpers::connection::ConnectionManager};
+use crate::gui::{ConnectionListAction, ConnectionListPage, Field, Focus, NewConnectionAction, NewConnectionPage, QueryPage, QueryPageAction, HistoryPage, HistoryPageAction};
+use crate::helpers::connection::ConnectionManager;
 
 impl QueryPage {
     pub async fn handle_input(&mut self, key: KeyEvent, kind: KeyEventKind) -> Result<Option<QueryPageAction>> {
@@ -16,6 +17,9 @@ impl QueryPage {
                     Focus::Results => Focus::Query,
                 };
                 Ok(None)
+            }
+            KeyCode::Char('h') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                Ok(Some(QueryPageAction::OpenHistory))
             }
             KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.execute_query().await?;
@@ -239,5 +243,47 @@ impl NewConnectionPage {
             }
             _ => None,
         }
+    }
+}
+
+impl HistoryPage {
+    pub fn handle_input(&mut self, key: KeyEvent, kind: KeyEventKind) -> Option<HistoryPageAction> {
+        if kind != KeyEventKind::Press {
+            return None;
+        }
+
+        match key.code {
+            KeyCode::Up => {
+                self.scroll_up();
+                None
+            }
+            KeyCode::Down => {
+                let history = self.get_history_length();
+                self.scroll_down(history);
+                None
+            }
+            KeyCode::Enter => {
+                if let Some(query) = self.get_selected_query() {
+                    Some(HistoryPageAction::SelectQuery(query))
+                } else {
+                    None
+                }
+            }
+            KeyCode::Char('c') => {
+                let _ = self.clear_history();
+                None
+            }
+            KeyCode::Esc => Some(HistoryPageAction::Back),
+            _ => None,
+        }
+    }
+
+    fn get_history_length(&self) -> usize {
+        if let Ok(history_manager) = crate::gui::history::HistoryManager::new() {
+            if let Ok(history) = history_manager.load_history() {
+                return if history.is_empty() { 1 } else { history.len() };
+            }
+        }
+        1
     }
 }

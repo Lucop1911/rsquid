@@ -1,11 +1,12 @@
-mod components;
 mod connection_list;
 mod new_connection;
 mod query_page;
+pub(crate) mod history;
 
 pub use connection_list::*;
 pub use new_connection::*;
 pub use query_page::*;
+pub use history::*;
 
 use crate::helpers::connection::ConnectionManager;
 use anyhow::Result;
@@ -17,6 +18,7 @@ pub enum AppState {
     ConnectionList,
     NewConnection,
     QueryPage,
+    History,
 }
 
 pub struct App {
@@ -24,6 +26,7 @@ pub struct App {
     pub connection_list: ConnectionListPage,
     pub new_connection: NewConnectionPage,
     pub query_page: QueryPage,
+    pub history_page: HistoryPage,
     pub connection_manager: ConnectionManager,
     pub error_message: Option<String>,
 }
@@ -31,11 +34,14 @@ pub struct App {
 impl App {
     pub fn new() -> Result<Self> {
         let connection_manager = ConnectionManager::new()?;
+        let history_page = HistoryPage::new()?;
+        
         Ok(Self {
             state: AppState::ConnectionList,
             connection_list: ConnectionListPage::new(),
             new_connection: NewConnectionPage::new(),
             query_page: QueryPage::new(),
+            history_page,
             connection_manager,
             error_message: None,
         })
@@ -53,6 +59,9 @@ impl App {
             }
             AppState::QueryPage => {
                 self.query_page.render(f, area);
+            }
+            AppState::History => {
+                self.history_page.render(f, area);
             }
         }
     }
@@ -74,7 +83,6 @@ impl App {
                             let connections = self.connection_manager.load_connections()?;
                             if idx < connections.len() {
                                 let conn = connections[idx].clone();
-                                // Connection attempt
                                 match self.query_page.connect(conn).await {
                                     Ok(_) => {
                                         self.state = AppState::QueryPage;
@@ -110,17 +118,7 @@ impl App {
                         }
                         NewConnectionAction::Save(conn) => {
                             self.connection_manager.save_connection(conn.clone())?;
-                            // Connection attempt
-                            match self.query_page.connect(conn).await {
-                                Ok(_) => {
-                                    self.state = AppState::QueryPage;
-                                    self.error_message = None;
-                                }
-                                Err(e) => {
-                                    self.state = AppState::ConnectionList;
-                                    self.error_message = Some(format!("Connection failed: {}", e));
-                                }
-                            }
+                            self.state = AppState::ConnectionList;
                         }
                         NewConnectionAction::Update(idx, conn) => {
                             self.connection_manager
@@ -136,6 +134,22 @@ impl App {
                         QueryPageAction::Back => {
                             self.query_page.disconnect().await;
                             self.state = AppState::ConnectionList;
+                        }
+                        QueryPageAction::OpenHistory => {
+                            self.state = AppState::History;
+                        }
+                    }
+                }
+            }
+            AppState::History => {
+                if let Some(action) = self.history_page.handle_input(key, key.kind) {
+                    match action {
+                        HistoryPageAction::Back => {
+                            self.state = AppState::QueryPage;
+                        }
+                        HistoryPageAction::SelectQuery(query) => {
+                            self.query_page.set_query(query);
+                            self.state = AppState::QueryPage;
                         }
                     }
                 }

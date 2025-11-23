@@ -54,7 +54,7 @@ impl NewConnectionPage {
             ],
             field_state,
             name: String::new(),
-            db_type: String::from("postgres"),
+            db_type: String::from("mysql"),
             host: String::from("localhost"),
             port: String::from("5432"),
             database: String::new(),
@@ -101,7 +101,7 @@ impl NewConnectionPage {
         let items: Vec<ListItem> = vec![
             ListItem::new(format!("Name: {}", self.name)),
             ListItem::new(format!(
-                "Database Type: {} (postgres/mysql/sqlite)",
+                "Database Type (mysql/mariadb/postgres/sqlite): {}",
                 self.db_type
             )),
             ListItem::new(format!("Host: {}", self.host)),
@@ -169,7 +169,7 @@ impl NewConnectionPage {
             self.error = Some("Name is required".to_string());
             return None;
         }
-        if !["postgres", "mysql", "sqlite"].contains(&self.db_type.as_str()) {
+        if !["postgres", "mysql", "sqlite", "mariadb"].contains(&self.db_type.as_str()) {
             self.error = Some("Invalid database type".to_string());
             return None;
         }

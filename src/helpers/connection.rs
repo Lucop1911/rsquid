@@ -6,7 +6,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Connection {
     pub name: String,
-    pub db_type: String, // postgres, mysql, sqlite
+    pub db_type: String, // postgres, mysql, mariadb, sqlite
     pub host: String,
     pub port: u16,
     pub database: String,
@@ -23,7 +23,7 @@ impl Connection {
                     self.username, self.password, self.host, self.port, self.database
                 )
             }
-            "mysql" => {
+            "mysql" | "mariadb" => {
                 if self.username.is_empty() {
                     format!("mysql://{}:{}/{}", self.host, self.port, self.database)
                 } else if self.password.is_empty() {
@@ -54,7 +54,7 @@ impl ConnectionManager {
     pub fn new() -> Result<Self> {
         let config_dir = dirs::config_dir()
             .context("Could not find config directory")?
-            .join("db-client-tui");
+            .join("rsquid");
         
         fs::create_dir_all(&config_dir)?;
         
