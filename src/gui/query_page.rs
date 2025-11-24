@@ -126,7 +126,7 @@ impl QueryPage {
         let help_text = if matches!(self.focus, Focus::Results) && !self.results.is_empty() {
             "Up/Down: Scroll Rows | Left/Right: Scroll Columns | PgUp/PgDn: Page | T/B: Top/Bottom | Ctrl+E: Execute | Ctrl+C: Clear | Ctrl+R: History | Tab: Switch Focus | Esc: Back"
         } else {
-            "Ctrl+E: Execute | Ctrl+C: Clear | Ctrl+H: History | Tab: Switch Focus | Esc: Back"
+            "Ctrl+E: Execute | Ctrl+C: Clear | Ctrl+R: History | Tab: Switch Focus | Esc: Back"
         };
 
         let help = Paragraph::new(help_text)
