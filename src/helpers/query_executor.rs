@@ -31,17 +31,59 @@ impl QueryExecutor {
 
     // Execute query, distinguish from SELECT-like and non-SELECT queries
     pub async fn execute(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
-        let trimmed = query.trim().to_lowercase();
+        // Split by semicolon and filter out empty queries
+        let queries: Vec<&str> = query
+            .split(';')
+            .map(|q| q.trim())
+            .filter(|q| !q.is_empty())
+            .collect();
 
-        if trimmed.starts_with("select")
-            || trimmed.starts_with("show")
-            || trimmed.starts_with("describe")
-            || trimmed.starts_with("explain")
-        {
-            self.execute_query(query).await
-        } else {
-            self.execute_non_query(query).await
+        if queries.is_empty() {
+            return Ok((Vec::new(), Vec::new()));
         }
+
+        // 1 query
+        if queries.len() == 1 {
+            let trimmed = queries[0].trim().to_lowercase();
+            if trimmed.starts_with("select")
+                || trimmed.starts_with("show")
+                || trimmed.starts_with("describe")
+                || trimmed.starts_with("explain")
+            {
+                return self.execute_query(queries[0]).await;
+            } else {
+                return self.execute_non_query(queries[0]).await;
+            }
+        }
+
+        // Multiple queries
+        let mut all_headers = Vec::new();
+        let mut all_rows = Vec::new();
+
+        for (i, q) in queries.iter().enumerate() {
+            let trimmed = q.trim().to_lowercase();
+            let (headers, rows) = if trimmed.starts_with("select")
+                || trimmed.starts_with("show")
+                || trimmed.starts_with("describe")
+                || trimmed.starts_with("explain")
+            {
+                self.execute_query(q).await?
+            } else {
+                self.execute_non_query(q).await?
+            };
+
+            if i > 0 && !all_rows.is_empty() {
+                all_rows.push(vec!["---".to_string(); headers.len().max(1)]);
+            }
+
+            // Combine results
+            if all_headers.is_empty() {
+                all_headers = headers.clone();
+            }
+            all_rows.extend(rows);
+        }
+
+        Ok((all_headers, all_rows))
     }
 
     // Execute SELECT/SHOW/DESCRIBE/EXPLAIN queries
