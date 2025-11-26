@@ -2,6 +2,7 @@ use crate::helpers::query_executor::QueryExecutor;
 use anyhow::{Result};
 use sqlx::mysql::{MySqlColumn, MySqlPool, MySqlRow};
 use sqlx::{Column, Row, TypeInfo, ValueRef};
+use bigdecimal::BigDecimal;
 
 impl QueryExecutor {
     pub async fn execute_mysql(
@@ -69,9 +70,14 @@ impl QueryExecutor {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|_| "err".to_string()),
 
-            "FLOAT" | "DOUBLE" | "DECIMAL" => row
+            "FLOAT" | "DOUBLE" => row
                 .try_get::<f64, _>(index)
                 .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+                
+            "DECIMAL" | "NEWDECIMAL" => row
+                .try_get::<BigDecimal, _>(index)
+                .map(|v| v.to_string())        
                 .unwrap_or_else(|_| "err".to_string()),
 
             "DATETIME" | "TIMESTAMP" => row
@@ -93,7 +99,6 @@ impl QueryExecutor {
                 if let Ok(s) = row.try_get::<String, _>(index) {
                     return s;
                 }
-                // Since reading as string might fail, i attempt to convert bytes to a string
                 if let Ok(bytes) = row.try_get::<Vec<u8>, _>(index) {
                     return String::from_utf8_lossy(&bytes).to_string();
                 }
@@ -101,7 +106,6 @@ impl QueryExecutor {
             }
 
             _ => {
-                // Fallback for any other type: try String, then bytes, then type name
                 if let Ok(s) = row.try_get::<String, _>(index) {
                     s
                 } else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(index) {
