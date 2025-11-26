@@ -44,7 +44,7 @@ impl HistoryManager {
     pub fn save_query(&self, query_string: String) -> Result<()> {
         let mut queries = self.load_history().unwrap_or_default();
         
-        // Non salvo le query uguali consecutive
+        // Wont save consecutive identical queries
         if let Some(last) = queries.last() {
             if last == &query_string {
                 return Ok(());

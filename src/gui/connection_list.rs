@@ -51,7 +51,7 @@ impl ConnectionListPage {
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(title, chunks[0]);
 
-        // Lista connessioni
+        // Connections list
         let connections = conn_manager.load_connections().unwrap_or_default();
 
         let mut items: Vec<ListItem> = connections
@@ -126,7 +126,7 @@ impl ConnectionListPage {
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(help, chunks[2]);
 
-        // Forza selezione valida
+        // Force valid selection
         let total_items = connections.len() + 1;
         if let Some(selected) = self.list_state.selected() {
             if selected >= total_items {
