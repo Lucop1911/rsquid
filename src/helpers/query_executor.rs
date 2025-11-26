@@ -1,37 +1,64 @@
 use crate::helpers::connection::Connection;
-use anyhow::Result;
-use sqlx::any::{ AnyPoolOptions, AnyRow};
-use sqlx::{AnyPool, Column, Row, ValueRef};
-use tokio::time::{timeout, Duration};
+use anyhow::{Result, anyhow};
+use sqlx::mysql::{MySqlColumn, MySqlPool, MySqlPoolOptions, MySqlRow};
+use sqlx::postgres::{PgColumn, PgPool, PgPoolOptions, PgRow};
+use sqlx::sqlite::{SqliteColumn, SqlitePool, SqlitePoolOptions, SqliteRow};
+use sqlx::{Column, Row, TypeInfo, ValueRef};
+use std::time::Duration;
+use tokio::time::timeout;
+
+pub enum DbPool {
+    Postgres(PgPool),
+    MySql(MySqlPool),
+    Sqlite(SqlitePool),
+}
 
 pub struct QueryExecutor {
-    pool: AnyPool,
+    pool: DbPool,
 }
 
 impl QueryExecutor {
-    // Executor, 5 sec timeout
     pub async fn new(connection: &Connection) -> Result<Self> {
         let conn_str = connection.to_connection_string();
+        let timeout_duration = Duration::from_secs(5);
 
-        let pool = match timeout(
-            Duration::from_secs(5),
-            AnyPoolOptions::new()
-                .max_connections(5)
-                .connect(&conn_str),
-        )
-        .await
-        {
-            Ok(Ok(pool)) => pool,
-            Ok(Err(e)) => anyhow::bail!("Failed to connect to database: {e}"),
-            Err(_) => anyhow::bail!("Failed to connect to database: connection timed out"),
+        let pool = match connection.db_type.as_str() {
+            "postgres" => {
+                let p = timeout(
+                    timeout_duration,
+                    PgPoolOptions::new().max_connections(5).connect(&conn_str),
+                )
+                .await??;
+                DbPool::Postgres(p)
+            }
+            "mysql" | "mariadb" => {
+                let p = timeout(
+                    timeout_duration,
+                    MySqlPoolOptions::new()
+                        .max_connections(5)
+                        .connect(&conn_str),
+                )
+                .await??;
+                DbPool::MySql(p)
+            }
+            "sqlite" => {
+                let p = timeout(
+                    timeout_duration,
+                    SqlitePoolOptions::new()
+                        .max_connections(5)
+                        .connect(&conn_str),
+                )
+                .await??;
+                DbPool::Sqlite(p)
+            }
+            _ => return Err(anyhow!("Unsupported database type")),
         };
 
         Ok(Self { pool })
     }
 
-    // Execute query, distinguish from SELECT-like and non-SELECT queries
     pub async fn execute(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
-        // Split by semicolon and filter out empty queries
+        // Split queries by semicolon to handle multiple statements
         let queries: Vec<&str> = query
             .split(';')
             .map(|q| q.trim())
@@ -42,43 +69,32 @@ impl QueryExecutor {
             return Ok((Vec::new(), Vec::new()));
         }
 
-        // 1 query
-        if queries.len() == 1 {
-            let trimmed = queries[0].trim().to_lowercase();
-            if trimmed.starts_with("select")
-                || trimmed.starts_with("show")
-                || trimmed.starts_with("describe")
-                || trimmed.starts_with("explain")
-            {
-                return self.execute_query(queries[0]).await;
-            } else {
-                return self.execute_non_query(queries[0]).await;
-            }
-        }
-
-        // Multiple queries
         let mut all_headers = Vec::new();
         let mut all_rows = Vec::new();
 
         for (i, q) in queries.iter().enumerate() {
-            let trimmed = q.trim().to_lowercase();
-            let (headers, rows) = if trimmed.starts_with("select")
+            // Check if it's a SELECT-like query or an Action query
+            let trimmed = q.to_lowercase();
+            let query_type = trimmed.starts_with("select")
                 || trimmed.starts_with("show")
                 || trimmed.starts_with("describe")
                 || trimmed.starts_with("explain")
-            {
-                self.execute_query(q).await?
-            } else {
-                self.execute_non_query(q).await?
+                || trimmed.starts_with("with")
+                || trimmed.starts_with("values");
+
+            let (headers, rows) = match &self.pool {
+                DbPool::Postgres(p) => self.execute_postgres(p, q, query_type).await?,
+                DbPool::MySql(p) => self.execute_mysql(p, q, query_type).await?,
+                DbPool::Sqlite(p) => self.execute_sqlite(p, q, query_type).await?,
             };
 
+            // Separator for multiple queries
             if i > 0 && !all_rows.is_empty() {
                 all_rows.push(vec!["---".to_string(); headers.len().max(1)]);
             }
 
-            // Combine results
             if all_headers.is_empty() {
-                all_headers = headers.clone();
+                all_headers = headers;
             }
             all_rows.extend(rows);
         }
@@ -86,13 +102,32 @@ impl QueryExecutor {
         Ok((all_headers, all_rows))
     }
 
-    // Execute SELECT/SHOW/DESCRIBE/EXPLAIN queries
-    async fn execute_query(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
-        let rows: Vec<AnyRow> = sqlx::query(query)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| anyhow::anyhow!("SQL execution failed: {:?}", e))?;
+    pub async fn close(self) -> Result<()> {
+        match self.pool {
+            DbPool::Postgres(p) => p.close().await,
+            DbPool::MySql(p) => p.close().await,
+            DbPool::Sqlite(p) => p.close().await,
+        }
+        Ok(())
+    }
 
+    // --- Postgresql Implementation ---
+
+    async fn execute_postgres(
+        &self,
+        pool: &PgPool,
+        query: &str,
+        is_query: bool,
+    ) -> Result<(Vec<String>, Vec<Vec<String>>)> {
+        if !is_query {
+            let result = sqlx::query(query).execute(pool).await?;
+            return Ok((
+                vec!["Result".to_string()],
+                vec![vec![format!("{} row(s) affected", result.rows_affected())]],
+            ));
+        }
+
+        let rows = sqlx::query(query).fetch_all(pool).await?;
         if rows.is_empty() {
             return Ok((Vec::new(), Vec::new()));
         }
@@ -102,13 +137,12 @@ impl QueryExecutor {
             .iter()
             .map(|c| c.name().to_string())
             .collect();
-
         let mut result_rows = Vec::new();
+
         for row in rows {
             let mut row_data = Vec::new();
-            for i in 0..row.columns().len() {
-                let val = Self::row_value_to_string(&row, i);
-                row_data.push(val);
+            for (i, col) in row.columns().iter().enumerate() {
+                row_data.push(self.pg_value_to_string(&row, i, col));
             }
             result_rows.push(row_data);
         }
@@ -116,105 +150,260 @@ impl QueryExecutor {
         Ok((headers, result_rows))
     }
 
-    // Execute INSERT/UPDATE/DELETE/other commands
-    async fn execute_non_query(&self, query: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
-        let result = sqlx::query(query)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| anyhow::anyhow!("SQL execution failed: {:?}", e))?;
+    fn pg_value_to_string(&self, row: &PgRow, index: usize, col: &PgColumn) -> String {
+        if row.try_get_raw(index).map_or(true, |v| v.is_null()) {
+            return "NULL".to_string();
+        }
 
-        let rows_affected = result.rows_affected();
+        let type_name = col.type_info().name();
 
-        let headers = vec!["Result".to_string()];
-        let rows = vec![vec![format!("{} row(s) affected", rows_affected)]];
+        match type_name {
+            "BOOL" => row
+                .try_get::<bool, _>(index)
+                .map(|b| b.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
 
-        Ok((headers, rows))
-    }
+            "INT2" | "INT4" | "INT8" => row
+                .try_get::<i64, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
 
-    // Convert types
-    fn row_value_to_string(row: &AnyRow, index: usize) -> String {
-        let value_ref = row.try_get_raw(index);
-        
-        // NULL
-        if let Ok(val) = value_ref {
-            if val.is_null() {
-                return "NULL".to_string();
+            "FLOAT4" | "FLOAT8" | "NUMERIC" => row
+                .try_get::<f64, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "TEXT" | "VARCHAR" | "CHAR" | "NAME" => {
+                row.try_get::<String, _>(index).unwrap_or_default()
+            }
+
+            "TIMESTAMP" => row
+                .try_get::<chrono::NaiveDateTime, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "TIMESTAMPTZ" => row
+                .try_get::<chrono::DateTime<chrono::Utc>, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "DATE" => row
+                .try_get::<chrono::NaiveDate, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "UUID" => row
+                .try_get::<sqlx::types::Uuid, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "JSON" | "JSONB" => row
+                .try_get::<serde_json::Value, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            _ => {
+                // Fallback: try as string, then generic debug
+                if let Ok(s) = row.try_get::<String, _>(index) {
+                    s
+                } else {
+                    format!("<{}>", type_name)
+                }
             }
         }
+    }
+
+    // --- MySQL / MariaDB Implementation ---
+
+    async fn execute_mysql(
+        &self,
+        pool: &MySqlPool,
+        query: &str,
+        is_query: bool,
+    ) -> Result<(Vec<String>, Vec<Vec<String>>)> {
+        // MySQL `EXPLAIN` and `DESCRIBE` act like queries
+        let actual_is_query = is_query
+            || query.to_lowercase().starts_with("describe")
+            || query.to_lowercase().starts_with("explain");
+
+        if !actual_is_query {
+            let result = sqlx::query(query).execute(pool).await?;
+            return Ok((
+                vec!["Result".to_string()],
+                vec![vec![format!("{} row(s) affected", result.rows_affected())]],
+            ));
+        }
+
+        let rows = sqlx::query(query).fetch_all(pool).await?;
+        if rows.is_empty() {
+            return Ok((Vec::new(), Vec::new()));
+        }
+
+        let headers: Vec<String> = rows[0]
+            .columns()
+            .iter()
+            .map(|c| c.name().to_string())
+            .collect();
+        let mut result_rows = Vec::new();
+
+        for row in rows {
+            let mut row_data = Vec::new();
+            for (i, col) in row.columns().iter().enumerate() {
+                row_data.push(self.mysql_value_to_string(&row, i, col));
+            }
+            result_rows.push(row_data);
+        }
+
+        Ok((headers, result_rows))
+    }
+
+    fn mysql_value_to_string(&self, row: &MySqlRow, index: usize, col: &MySqlColumn) -> String {
+        if row.try_get_raw(index).map_or(true, |v| v.is_null()) {
+            return "NULL".to_string();
+        }
+
+        let type_name = col.type_info().name();
+
+        match type_name {
+            "BOOLEAN" => row
+                .try_get::<bool, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "TINYINT" | "SMALLINT" | "INT" | "BIGINT" => row
+                .try_get::<i64, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "TINYINT UNSIGNED" | "SMALLINT UNSIGNED" | "INT UNSIGNED" | "BIGINT UNSIGNED" => row
+                .try_get::<u64, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "FLOAT" | "DOUBLE" | "DECIMAL" => row
+                .try_get::<f64, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "DATETIME" | "TIMESTAMP" => row
+                .try_get::<chrono::NaiveDateTime, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "DATE" => row
+                .try_get::<chrono::NaiveDate, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "JSON" => row
+                .try_get::<serde_json::Value, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "VARCHAR" | "CHAR" | "TEXT" | "VAR_STRING" | "BLOB" | "BINARY" => {
+                if let Ok(s) = row.try_get::<String, _>(index) {
+                    return s;
+                }
+                // Since reading as string might fail, i attempt to convert bytes to a string
+                if let Ok(bytes) = row.try_get::<Vec<u8>, _>(index) {
+                    return String::from_utf8_lossy(&bytes).to_string();
+                }
+                format!("<{}>", type_name)
+            }
+
+            _ => {
+                // Fallback for any other type: try String, then bytes, then type name
+                if let Ok(s) = row.try_get::<String, _>(index) {
+                    s
+                } else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(index) {
+                    String::from_utf8_lossy(&bytes).to_string()
+                } else {
+                    format!("<{}>", type_name)
+                }
+            }
+        }
+    }
+
+    // --- SQLite Implementation ---
+
+    async fn execute_sqlite(
+        &self,
+        pool: &SqlitePool,
+        query: &str,
+        is_query: bool,
+    ) -> Result<(Vec<String>, Vec<Vec<String>>)> {
+        if !is_query {
+            let result = sqlx::query(query).execute(pool).await?;
+            return Ok((
+                vec!["Result".to_string()],
+                vec![vec![format!("{} row(s) affected", result.rows_affected())]],
+            ));
+        }
+
+        let rows = sqlx::query(query).fetch_all(pool).await?;
+        if rows.is_empty() {
+            return Ok((Vec::new(), Vec::new()));
+        }
+
+        let headers: Vec<String> = rows[0]
+            .columns()
+            .iter()
+            .map(|c| c.name().to_string())
+            .collect();
+        let mut result_rows = Vec::new();
+
+        for row in rows {
+            let mut row_data = Vec::new();
+            for (i, col) in row.columns().iter().enumerate() {
+                row_data.push(self.sqlite_value_to_string(&row, i, col));
+            }
+            result_rows.push(row_data);
+        }
+
+        Ok((headers, result_rows))
+    }
+
+    fn sqlite_value_to_string(&self, row: &SqliteRow, index: usize, col: &SqliteColumn) -> String {
+        if row.try_get_raw(index).map_or(true, |v| v.is_null()) {
+            return "NULL".to_string();
+        }
+
+        let type_name = col.type_info().name();
+
+        match type_name {
+            "BOOLEAN" => row
+                .try_get::<bool, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "INTEGER" => row
+                .try_get::<i64, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "REAL" => row
+                .try_get::<f64, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| "err".to_string()),
+
+            "TEXT" => row.try_get::<String, _>(index).unwrap_or_default(),
+
+            "DATETIME" => row
+                .try_get::<chrono::NaiveDateTime, _>(index)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|_| {
+                    // Sometimes SQLite stores dates as strings
+                    row.try_get::<String, _>(index)
+                        .unwrap_or_else(|_| "err".to_string())
+                }),
                 
-        // String
-        if let Ok(v) = row.try_get::<String, _>(index) {
-            return v;
-        }
-        
-        // Integers
-        if let Ok(v) = row.try_get::<i32, _>(index) {
-            return v.to_string();
-        }
-        if let Ok(v) = row.try_get::<i64, _>(index) {
-            return v.to_string();
-        }
-        
-        // Floating point
-        if let Ok(v) = row.try_get::<f32, _>(index) {
-            return v.to_string();
-        }
-        if let Ok(v) = row.try_get::<f64, _>(index) {
-            return v.to_string();
-        }
-        
-        // Bool
-        if let Ok(v) = row.try_get::<bool, _>(index) {
-            return v.to_string();
-        }
-        
-        // Byte slice to UTF-8
-        if let Ok(bytes) = row.try_get::<&[u8], _>(index) {
-            if let Ok(s) = std::str::from_utf8(bytes) {
-                return s.to_string();
-            }
-            return format!("<binary: {} bytes>", bytes.len());
-        }
-        
-        // Byte vector to UTF-8 string
-        if let Ok(bytes) = row.try_get::<Vec<u8>, _>(index) {
-            match String::from_utf8(bytes) {
-                Ok(s) => return s,
-                Err(e) => return format!("<binary: {} bytes>", e.as_bytes().len()),
+            _ => {
+                if let Ok(s) = row.try_get::<String, _>(index) {
+                    s
+                } else {
+                    format!("<{}>", type_name)
+                }
             }
         }
-                
-        "<unknown>".to_string()
-    }
-
-    // Close pool
-    pub async fn close(self) -> Result<()> {
-        self.pool.close().await;
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::helpers::connection::Connection;
-
-    #[tokio::test]
-    async fn test_connection_and_query() {
-        let conn = Connection {
-            name: "test".to_string(),
-            db_type: "mysql".to_string(),
-            host: "127.0.0.1".to_string(),
-            port: 3306,
-            database: "dbname".to_string(),
-            username: "root".to_string(),
-            password: "admin".to_string(),
-        };
-
-        let executor = QueryExecutor::new(&conn).await.unwrap();
-        let (headers, rows) = executor.execute("SELECT 1 AS test_col;").await.unwrap();
-
-        assert_eq!(headers, vec!["test_col".to_string()]);
-        assert_eq!(rows, vec![vec!["1".to_string()]]);
     }
 }
