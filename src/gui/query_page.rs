@@ -134,11 +134,11 @@ impl QueryPage {
         }
 
         let help_text = if matches!(self.focus, Focus::Results) && !self.results.is_empty() {
-            "Up/Down: Scroll | Left/Right: Columns | PgUp/PgDn: Page | T/B: Top/Bottom | Ctrl+L: Limit | Tab: Focus | 1: Query | 2: Explorer | Esc: Back"
+            "Up/Down: Scroll | Left/Right: Columns | PgUp/PgDn: Page | T/B: Top/Bottom | Tab: Query Focus| Ctrl+L: Limit rows | Esc: Back"
         } else if matches!(self.focus, Focus::Explorer) {
-            "Up/Down: Navigate | Enter: Expand/Collapse | 1: Query Focus | 2: Explorer | Esc: Back"
+            "Up/Down: Navigate | Enter: Expand/Collapse | Tab / Ctrl+E: Query Focus | Esc: Back"
         } else {
-            "Ctrl+E: Execute | Ctrl+C: Clear | Ctrl+R: History | Ctrl+L: Set Limit | Tab: Focus | 1: Query | 2: Explorer | Esc: Back"
+            "Ctrl+S: Execute | Ctrl+C: Clear | Ctrl+R: History | Tab: Results Focus | Ctrl+E: Explorer | Esc: Back"
         };
 
         let help = Paragraph::new(help_text)
@@ -208,9 +208,9 @@ impl QueryPage {
         let query_block = Block::default()
             .borders(Borders::ALL)
             .title(if is_focused {
-                "SQL Query (Ctrl+E to Execute) [EDITING]"
+                "SQL Query (Ctrl+Enter to Execute) [EDITING]"
             } else {
-                "SQL Query (Ctrl+E to Execute)"
+                "SQL Query (Ctrl+Enter to Execute)"
             })
             .border_style(if is_focused {
                 Style::default()

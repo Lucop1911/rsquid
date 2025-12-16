@@ -39,12 +39,12 @@ impl QueryPage {
             // Normal input handling
             match key.code {
                 KeyCode::Esc => Ok(Some(QueryPageAction::Back)),
-                KeyCode::Char('1') => {
-                    self.focus = Focus::Query;
-                    Ok(None)
-                }
-                KeyCode::Char('2') => {
-                    self.focus = Focus::Explorer;
+                KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    if self.focus == Focus::Explorer {
+                        self.focus = Focus::Query;
+                    } else {
+                        self.focus = Focus::Explorer;
+                    }
                     Ok(None)
                 }
                 KeyCode::Tab => {
@@ -57,19 +57,6 @@ impl QueryPage {
                 }
                 KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     Ok(Some(QueryPageAction::OpenHistory))
-                }
-                KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    self.show_input_overlay = true;
-                    self.input_buffer = if self.max_results == 0 {
-                        String::new()
-                    } else {
-                        self.max_results.to_string()
-                    };
-                    Ok(None)
-                }
-                KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    self.execute_query().await?;
-                    Ok(None)
                 }
                 KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     if matches!(self.focus, Focus::Query) {
@@ -163,6 +150,10 @@ impl QueryPage {
                     }
                     Ok(None)
                 }
+                KeyCode::Char('s') if matches!(self.focus, Focus::Query) && key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.execute_query().await?;
+                    Ok(None)
+                }
                 KeyCode::Enter if matches!(self.focus, Focus::Query) => {
                     let mut chars: Vec<char> = self.query.chars().collect();
                     let cursor_pos = self.cursor_position.min(chars.len());
@@ -190,6 +181,11 @@ impl QueryPage {
                 KeyCode::PageDown if matches!(self.focus, Focus::Query) => {
                     self.cursor_position = self.query.chars().count();
                     Ok(None)
+                }
+                KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    self.show_input_overlay = true;
+                    Ok(None)
+
                 }
                 _ => Ok(None),
             }
