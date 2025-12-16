@@ -1,5 +1,5 @@
 mod gui;
-mod helpers;
+mod utils;
 
 use anyhow::Result;
 use crossterm::{

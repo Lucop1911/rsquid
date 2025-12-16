@@ -1,12 +1,12 @@
+use crate::utils::query_executor::QueryExecutor;
 use anyhow::{Result};
-use sqlx::postgres::{PgColumn, PgPool, PgRow};
+use sqlx::sqlite::{SqliteColumn, SqlitePool, SqliteRow};
 use sqlx::{Column, Row, TypeInfo, ValueRef};
-use crate::helpers::query_executor::QueryExecutor;
 
 impl QueryExecutor {
-    pub async fn execute_postgres(
+    pub async fn execute_sqlite(
         &self,
-        pool: &PgPool,
+        pool: &SqlitePool,
         query: &str,
         is_query: bool,
     ) -> Result<(Vec<String>, Vec<Vec<String>>)> {
@@ -33,7 +33,7 @@ impl QueryExecutor {
         for row in rows {
             let mut row_data = Vec::new();
             for (i, col) in row.columns().iter().enumerate() {
-                row_data.push(self.pg_value_to_string(&row, i, col));
+                row_data.push(self.sqlite_value_to_string(&row, i, col));
             }
             result_rows.push(row_data);
         }
@@ -41,7 +41,7 @@ impl QueryExecutor {
         Ok((headers, result_rows))
     }
 
-    fn pg_value_to_string(&self, row: &PgRow, index: usize, col: &PgColumn) -> String {
+    fn sqlite_value_to_string(&self, row: &SqliteRow, index: usize, col: &SqliteColumn) -> String {
         if row.try_get_raw(index).map_or(true, |v| v.is_null()) {
             return "NULL".to_string();
         }
@@ -49,52 +49,33 @@ impl QueryExecutor {
         let type_name = col.type_info().name();
 
         match type_name {
-            "BOOL" => row
+            "BOOLEAN" => row
                 .try_get::<bool, _>(index)
-                .map(|b| b.to_string())
+                .map(|v| v.to_string())
                 .unwrap_or_else(|_| "err".to_string()),
 
-            "INT2" | "INT4" | "INT8" => row
+            "INTEGER" => row
                 .try_get::<i64, _>(index)
                 .map(|v| v.to_string())
                 .unwrap_or_else(|_| "err".to_string()),
 
-            "FLOAT4" | "FLOAT8" | "NUMERIC" => row
+            "REAL" => row
                 .try_get::<f64, _>(index)
                 .map(|v| v.to_string())
                 .unwrap_or_else(|_| "err".to_string()),
 
-            "TEXT" | "VARCHAR" | "CHAR" | "NAME" => {
-                row.try_get::<String, _>(index).unwrap_or_default()
-            }
+            "TEXT" => row.try_get::<String, _>(index).unwrap_or_default(),
 
-            "TIMESTAMP" => row
+            "DATETIME" => row
                 .try_get::<chrono::NaiveDateTime, _>(index)
                 .map(|v| v.to_string())
-                .unwrap_or_else(|_| "err".to_string()),
-
-            "TIMESTAMPTZ" => row
-                .try_get::<chrono::DateTime<chrono::Utc>, _>(index)
-                .map(|v| v.to_string())
-                .unwrap_or_else(|_| "err".to_string()),
-
-            "DATE" => row
-                .try_get::<chrono::NaiveDate, _>(index)
-                .map(|v| v.to_string())
-                .unwrap_or_else(|_| "err".to_string()),
-
-            "UUID" => row
-                .try_get::<sqlx::types::Uuid, _>(index)
-                .map(|v| v.to_string())
-                .unwrap_or_else(|_| "err".to_string()),
-
-            "JSON" | "JSONB" => row
-                .try_get::<serde_json::Value, _>(index)
-                .map(|v| v.to_string())
-                .unwrap_or_else(|_| "err".to_string()),
+                .unwrap_or_else(|_| {
+                    // Sometimes SQLite stores dates as strings
+                    row.try_get::<String, _>(index)
+                        .unwrap_or_else(|_| "err".to_string())
+                }),
 
             _ => {
-                // Fallback: try as string, then generic debug
                 if let Ok(s) = row.try_get::<String, _>(index) {
                     s
                 } else {

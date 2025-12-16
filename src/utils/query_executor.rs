@@ -1,4 +1,4 @@
-use crate::helpers::connection::Connection;
+use crate::utils::connection::Connection;
 use anyhow::{Result, anyhow};
 use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
 use sqlx::postgres::{PgPool, PgPoolOptions};

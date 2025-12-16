@@ -1,4 +1,4 @@
-use crate::helpers::query_executor::QueryExecutor;
+use crate::utils::query_executor::QueryExecutor;
 use anyhow::{Result};
 use sqlx::mysql::{MySqlColumn, MySqlPool, MySqlRow};
 use sqlx::{Column, Row, TypeInfo, ValueRef};

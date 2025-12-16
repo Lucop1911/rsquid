@@ -1,14 +1,16 @@
 mod connection_list;
 mod new_connection;
 mod query_page;
-pub(crate) mod history;
+pub mod history;
+mod input_overlay;
+pub mod gui_helpers;
 
 pub use connection_list::*;
 pub use new_connection::*;
 pub use query_page::*;
 pub use history::*;
 
-use crate::helpers::connection::ConnectionManager;
+use crate::utils::connection::ConnectionManager;
 use anyhow::Result;
 use crossterm::event::KeyEvent;
 use ratatui::Frame;

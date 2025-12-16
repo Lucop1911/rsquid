@@ -1,4 +1,4 @@
-use crate::helpers::connection::Connection;
+use crate::utils::connection::Connection;
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
