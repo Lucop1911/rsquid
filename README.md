@@ -1,6 +1,6 @@
 # RSQUID
 
-A rust terminal user interface built to interact with databases.
+Rsquid (r: rust, sq: sql, ui: user interface, d: database) is a rust terminal based client used to interact with databases.
 
 ---
 
